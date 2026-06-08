@@ -708,13 +708,7 @@ def setup_mcp_config_wizard(vault_path):
             elif "Cursor (Global)" in name:
                 detected = os.path.exists(os.path.join(home, ".cursor"))
             elif "Windsurf (Global)" in name:
-                detected = os.path.exists(os.path.join(home, ".codeium"))
-            elif "Claude Code" in name:
-                detected = os.path.exists(os.path.join(home, ".claude"))
-            elif "Hermes Agent" in name:
-                detected = os.path.exists(os.path.join(home, ".hermes"))
-            elif "OpenClaw" in name:
-                detected = os.path.exists(os.path.join(home, ".openclaw"))
+                detected = os.path.exists(os.path.join(home, ".codeium", "windsurf"))
             elif "Cline" in name or "Roo Code" in name:
                 detected = os.path.exists(os.path.dirname(path))
                 
