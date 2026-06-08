@@ -51,8 +51,8 @@ cd synapse
 
 ### 2. Run the Interactive Installer
 ```bash
-chmod +x dist/setup.sh
-./dist/setup.sh
+chmod +x setup.sh
+./setup.sh
 ```
 The installer will prompt you for:
 - Whether you want to enable local semantic search (installs `fastembed` automatically).
@@ -166,7 +166,7 @@ This allows your background OpenClaw loops to read, search, and update memories 
 ---
 
 ### 💻 2. Cursor IDE Integration (`.cursorrules`)
-The distribution folder contains a ready-to-use `.cursorrules` file. When you open this vault (or a project workspace linking to it) in Cursor:
+The repository contains a ready-to-use `.cursorrules` file. When you open this vault (or a project workspace linking to it) in Cursor:
 - Copy the `.cursorrules` file to your project's root.
 - Cursor's AI models will automatically read the instructions and call `synapse.py` in the terminal to search, view note sections, and write session memories without cluttering your chat context.
 
@@ -203,7 +203,7 @@ This vault coordinates active projects, logs session memories, and acts as my pe
 
 To remove Synapse from your machine, run the interactive uninstaller script:
 ```bash
-./dist/uninstall.sh
+./uninstall.sh
 ```
 
 The uninstaller will guide you through:
