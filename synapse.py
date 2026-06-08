@@ -457,12 +457,94 @@ def write_mcp_configuration(config_path, script_path):
         sys.stderr.write(f"Error writing configuration at {config_path}: {e}\n")
         return False
 
+def is_hermes_configured(config_path):
+    if not os.path.exists(config_path):
+        return False
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return "synapse-vault" in content
+    except Exception:
+        return False
+
+def write_hermes_configuration(config_path, script_path):
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        content = ""
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        
+        block = f'  synapse-vault:\n    command: "python3"\n    args: ["{script_path}", "mcp"]\n'
+        
+        if "mcp_servers:" in content:
+            parts = content.split("mcp_servers:", 1)
+            updated_content = parts[0] + "mcp_servers:\n" + block + parts[1]
+        else:
+            newline = "\n" if content and not content.endswith("\n") else ""
+            updated_content = content + newline + "mcp_servers:\n" + block
+            
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+        return True
+    except Exception as e:
+        sys.stderr.write(f"Error writing Hermes configuration: {e}\n")
+        return False
+
+def is_openclaw_configured(config_path):
+    if not os.path.exists(config_path):
+        return False
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if "mcp" in data and "servers" in data["mcp"]:
+            return "synapse-vault" in data["mcp"]["servers"]
+        if "mcpServers" in data:
+            return "synapse-vault" in data["mcpServers"]
+        return False
+    except Exception:
+        return False
+
+def write_openclaw_configuration(config_path, script_path):
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        data = {}
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+                
+        if "mcp" not in data:
+            data["mcp"] = {}
+        if "servers" not in data["mcp"]:
+            data["mcp"]["servers"] = {}
+            
+        server_config = {
+            "command": "python3",
+            "args": [script_path, "mcp"]
+        }
+        data["mcp"]["servers"]["synapse-vault"] = server_config
+        
+        if "mcpServers" not in data:
+            data["mcpServers"] = {}
+        data["mcpServers"]["synapse-vault"] = server_config
+        
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception as e:
+        sys.stderr.write(f"Error writing OpenClaw configuration: {e}\n")
+        return False
+
 def setup_mcp_config_wizard(vault_path):
     print("\n===============================================")
     print("🔌 Automated MCP Server Setup")
     print("===============================================")
     print("Synapse can automatically configure your local AI agents (Claude Desktop,")
-    print("Cursor, Windsurf, Claude Code, Cline, Roo Code) to connect to this vault's MCP server.\n")
+    print("Cursor, Windsurf, Claude Code, Cline, Roo Code, Hermes, OpenClaw)")
+    print("to connect to this vault's MCP server.\n")
     
     try:
         choice = input("Would you like to automatically configure MCP for your agents? [Y/n]: ").strip().lower()
@@ -492,87 +574,124 @@ def setup_mcp_config_wizard(vault_path):
     if claude_path:
         configs.append({
             "name": "Claude Desktop",
-            "path": claude_path
+            "path": claude_path,
+            "type": "json"
         })
         
     # 2. Cursor (Global)
     configs.append({
         "name": "Cursor (Global)",
-        "path": os.path.join(home, ".cursor", "mcp.json")
+        "path": os.path.join(home, ".cursor", "mcp.json"),
+        "type": "json"
     })
 
     # 3. Windsurf (Global)
     configs.append({
         "name": "Windsurf (Global)",
-        "path": os.path.join(home, ".codeium", "windsurf", "mcp_config.json")
+        "path": os.path.join(home, ".codeium", "windsurf", "mcp_config.json"),
+        "type": "json"
     })
 
     # 4. Claude Code (CLI)
     configs.append({
         "name": "Claude Code (CLI)",
-        "path": os.path.join(home, ".claude.json")
+        "path": os.path.join(home, ".claude.json"),
+        "type": "json"
+    })
+
+    # 5. Hermes Agent
+    configs.append({
+        "name": "Hermes Agent (Nous Research)",
+        "path": os.path.join(home, ".hermes", "config.yaml"),
+        "type": "hermes"
+    })
+
+    # 6. OpenClaw (Main Config)
+    configs.append({
+        "name": "OpenClaw (Main Config)",
+        "path": os.path.join(home, ".openclaw", "openclaw.json"),
+        "type": "openclaw"
+    })
+
+    # 7. OpenClaw (MCP Config)
+    configs.append({
+        "name": "OpenClaw (MCP Config)",
+        "path": os.path.join(home, ".openclaw", "mcp.json"),
+        "type": "openclaw"
     })
         
-    # 5. Cline (VS Code & Cursor)
+    # 8. Cline (VS Code & Cursor)
     if sys.platform == "darwin":
         configs.append({
             "name": "Cline (VS Code)",
-            "path": os.path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
         configs.append({
             "name": "Cline (Cursor)",
-            "path": os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
     elif sys.platform == "win32":
         appdata = os.environ.get("APPDATA")
         if appdata:
             configs.append({
                 "name": "Cline (VS Code)",
-                "path": os.path.join(appdata, "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+                "path": os.path.join(appdata, "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+                "type": "json"
             })
             configs.append({
                 "name": "Cline (Cursor)",
-                "path": os.path.join(appdata, "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+                "path": os.path.join(appdata, "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+                "type": "json"
             })
     elif sys.platform.startswith("linux"):
         configs.append({
             "name": "Cline (VS Code)",
-            "path": os.path.join(home, ".config", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, ".config", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
         configs.append({
             "name": "Cline (Cursor)",
-            "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
 
-    # 6. Roo Code (VS Code & Cursor)
+    # 9. Roo Code (VS Code & Cursor)
     if sys.platform == "darwin":
         configs.append({
             "name": "Roo Code (VS Code)",
-            "path": os.path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
         configs.append({
             "name": "Roo Code (Cursor)",
-            "path": os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
     elif sys.platform == "win32":
         appdata = os.environ.get("APPDATA")
         if appdata:
             configs.append({
                 "name": "Roo Code (VS Code)",
-                "path": os.path.join(appdata, "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+                "path": os.path.join(appdata, "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json"),
+                "type": "json"
             })
             configs.append({
                 "name": "Roo Code (Cursor)",
-                "path": os.path.join(appdata, "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+                "path": os.path.join(appdata, "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json"),
+                "type": "json"
             })
     elif sys.platform.startswith("linux"):
         configs.append({
             "name": "Roo Code (VS Code)",
-            "path": os.path.join(home, ".config", "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, ".config", "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
         configs.append({
             "name": "Roo Code (Cursor)",
-            "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+            "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json"),
+            "type": "json"
         })
 
     available_targets = []
@@ -592,6 +711,10 @@ def setup_mcp_config_wizard(vault_path):
                 detected = os.path.exists(os.path.join(home, ".codeium"))
             elif "Claude Code" in name:
                 detected = os.path.exists(os.path.join(home, ".claude"))
+            elif "Hermes Agent" in name:
+                detected = os.path.exists(os.path.join(home, ".hermes"))
+            elif "OpenClaw" in name:
+                detected = os.path.exists(os.path.join(home, ".openclaw"))
             elif "Cline" in name or "Roo Code" in name:
                 detected = os.path.exists(os.path.dirname(path))
                 
@@ -606,8 +729,15 @@ def setup_mcp_config_wizard(vault_path):
 
     print("Detected the following agents:")
     for idx, target in enumerate(available_targets, 1):
-        status = "[Already configured]" if is_mcp_already_configured(target["path"]) else "[Not configured]"
+        config_type = target.get("type", "json")
+        if config_type == "hermes":
+            status = "[Already configured]" if is_hermes_configured(target["path"]) else "[Not configured]"
+        elif config_type == "openclaw":
+            status = "[Already configured]" if is_openclaw_configured(target["path"]) else "[Not configured]"
+        else:
+            status = "[Already configured]" if is_mcp_already_configured(target["path"]) else "[Not configured]"
         print(f"  [{idx}] {target['name']} {status}")
+        
     print(f"  [{len(available_targets)+1}] Configure all of them")
     print(f"  [{len(available_targets)+2}] Skip")
 
@@ -631,7 +761,14 @@ def setup_mcp_config_wizard(vault_path):
             return
 
         for target in selected_targets:
-            success = write_mcp_configuration(target["path"], synapse_script_path)
+            config_type = target.get("type", "json")
+            if config_type == "hermes":
+                success = write_hermes_configuration(target["path"], synapse_script_path)
+            elif config_type == "openclaw":
+                success = write_openclaw_configuration(target["path"], synapse_script_path)
+            else:
+                success = write_mcp_configuration(target["path"], synapse_script_path)
+                
             if success:
                 print(f"✔ Successfully configured MCP for {target['name']}.")
             else:
