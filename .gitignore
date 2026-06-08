@@ -1,0 +1,22 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Synapse runtime databases and local vector indices
+embeddings.db
+**/embeddings.db
+*.db-journal
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Obsidian local settings (optional, ignored to prevent repo pollution)
+.obsidian/

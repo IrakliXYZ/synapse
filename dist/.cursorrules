@@ -1,0 +1,27 @@
+# Cursor Rules for Synapse Agent Workspace
+
+You are an AI agent working in this Synapse project workspace. Follow these rules to coordinate projects, search memories, and optimize token usage.
+
+## Core Rules
+
+1. **Optimize Your Context Window**:
+   - **Never** read entire folders or load massive notes.
+   - Use `python3 Tools/synapse.py search "<query>"` to find relevant information.
+   - Use `python3 Tools/synapse.py view "<note_path>" --section "<header>"` to read only specific headers (e.g. "Tech Stack" or "Tasks") rather than reading the whole file.
+
+2. **Note Navigation & Structure**:
+   - The vault follows a clean, unnumbered PARA directory structure: `Inbox/`, `Projects/`, `Areas/`, `Resources/`, `Memories/`.
+   - Use wiki-links to link notes together (e.g., `[[Projects/MyProject/README|MyProject]]`).
+   - Active projects are logged in the root `README.md` under `## Active Projects`.
+
+3. **Persistent Memory Logging**:
+   - **At the end of every session or task**, you must log your accomplishments, choices, and user insights.
+   - Use the `memo` CLI tool to log your session:
+     ```bash
+     python3 Tools/synapse.py memo --conv-id "<conversation_id>" --title "<Short Title>" --content "<Details of changes/preferences>" --links "<Related Notes>"
+     ```
+   - This automatically appends updates to `Memories/Memory - <conversation_id>.md` and indexes it in the root `README.md`.
+
+4. **User Preferences**:
+   - If you learn a permanent preference about the user (e.g. style preferences, preferred tech stack, environment setups), update the `## User Preferences` list in the root `README.md`.
+
