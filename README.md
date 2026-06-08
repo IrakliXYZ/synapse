@@ -44,9 +44,9 @@ YourVault/
 ## 🚀 Quick Start
 
 ### ⚡ One-Line Installation (No cloning required)
-To bootstrap a new memory vault or configure an existing one instantly, run this command in your terminal:
+To bootstrap a new memory vault or configure an existing one instantly, run this command in your terminal. This uses process substitution (`<(...)`) to keep the keyboard input active for interactive prompts:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/IrakliXYZ/synapse/main/setup.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/IrakliXYZ/synapse/main/setup.sh)
 ```
 
 ### 📦 Option 2: Clone & Local Install

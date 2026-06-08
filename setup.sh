@@ -22,11 +22,8 @@ echo ""
 if [ -t 0 ]; then
     # stdin is a terminal
     read -p "Do you want to enable local semantic/vector search? (Requires installing fastembed) [Y/n]: " INSTALL_FAST
-elif [ -c /dev/tty ]; then
-    # stdin is a pipe, but we have a controlling terminal
-    read -p "Do you want to enable local semantic/vector search? (Requires installing fastembed) [Y/n]: " INSTALL_FAST < /dev/tty
 else
-    # Headless / automated script fallback
+    # Headless / automated script fallback (e.g. piped curl install without process substitution)
     INSTALL_FAST="Y"
 fi
 
@@ -45,21 +42,13 @@ fi
 # 3. Run the Python Interactive Vault Init Wizard
 if [ -f "synapse.py" ]; then
     # Running from a local cloned repository
-    if [ -c /dev/tty ]; then
-        python3 synapse.py init < /dev/tty
-    else
-        python3 synapse.py init
-    fi
+    python3 synapse.py init
 else
     # Running via one-line curl install (download temporary launcher)
     echo "Downloading Synapse setup wizard..."
     TEMP_DIR=$(mktemp -d)
     curl -fsSL "https://raw.githubusercontent.com/IrakliXYZ/synapse/main/synapse.py" -o "$TEMP_DIR/synapse.py"
-    if [ -c /dev/tty ]; then
-        python3 "$TEMP_DIR/synapse.py" init < /dev/tty
-    else
-        python3 "$TEMP_DIR/synapse.py" init
-    fi
+    python3 "$TEMP_DIR/synapse.py" init
     rm -rf "$TEMP_DIR"
 fi
 
