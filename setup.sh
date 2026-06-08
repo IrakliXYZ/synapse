@@ -19,7 +19,17 @@ echo "✔ Found Python 3 (Version $PYTHON_VERSION)"
 echo ""
 
 # 2. Ask about local semantic search
-read -p "Do you want to enable local semantic/vector search? (Requires installing fastembed) [Y/n]: " INSTALL_FAST
+if [ -t 0 ]; then
+    # stdin is a terminal
+    read -p "Do you want to enable local semantic/vector search? (Requires installing fastembed) [Y/n]: " INSTALL_FAST
+elif [ -c /dev/tty ]; then
+    # stdin is a pipe, but we have a controlling terminal
+    read -p "Do you want to enable local semantic/vector search? (Requires installing fastembed) [Y/n]: " INSTALL_FAST < /dev/tty
+else
+    # Headless / automated script fallback
+    INSTALL_FAST="Y"
+fi
+
 INSTALL_FAST="${INSTALL_FAST:-Y}"
 
 if [[ "$INSTALL_FAST" =~ ^[Yy]$ ]]; then
@@ -35,13 +45,21 @@ fi
 # 3. Run the Python Interactive Vault Init Wizard
 if [ -f "synapse.py" ]; then
     # Running from a local cloned repository
-    python3 synapse.py init
+    if [ -c /dev/tty ]; then
+        python3 synapse.py init < /dev/tty
+    else
+        python3 synapse.py init
+    fi
 else
     # Running via one-line curl install (download temporary launcher)
     echo "Downloading Synapse setup wizard..."
     TEMP_DIR=$(mktemp -d)
     curl -fsSL "https://raw.githubusercontent.com/IrakliXYZ/synapse/main/synapse.py" -o "$TEMP_DIR/synapse.py"
-    python3 "$TEMP_DIR/synapse.py" init
+    if [ -c /dev/tty ]; then
+        python3 "$TEMP_DIR/synapse.py" init < /dev/tty
+    else
+        python3 "$TEMP_DIR/synapse.py" init
+    fi
     rm -rf "$TEMP_DIR"
 fi
 
