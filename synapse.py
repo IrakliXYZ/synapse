@@ -462,7 +462,7 @@ def setup_mcp_config_wizard(vault_path):
     print("🔌 Automated MCP Server Setup")
     print("===============================================")
     print("Synapse can automatically configure your local AI agents (Claude Desktop,")
-    print("Cline, Roo Code) to connect to this vault's MCP server.\n")
+    print("Cursor, Windsurf, Claude Code, Cline, Roo Code) to connect to this vault's MCP server.\n")
     
     try:
         choice = input("Would you like to automatically configure MCP for your agents? [Y/n]: ").strip().lower()
@@ -495,7 +495,25 @@ def setup_mcp_config_wizard(vault_path):
             "path": claude_path
         })
         
-    # 2. Cline (VS Code & Cursor)
+    # 2. Cursor (Global)
+    configs.append({
+        "name": "Cursor (Global)",
+        "path": os.path.join(home, ".cursor", "mcp.json")
+    })
+
+    # 3. Windsurf (Global)
+    configs.append({
+        "name": "Windsurf (Global)",
+        "path": os.path.join(home, ".codeium", "windsurf", "mcp_config.json")
+    })
+
+    # 4. Claude Code (CLI)
+    configs.append({
+        "name": "Claude Code (CLI)",
+        "path": os.path.join(home, ".claude.json")
+    })
+        
+    # 5. Cline (VS Code & Cursor)
     if sys.platform == "darwin":
         configs.append({
             "name": "Cline (VS Code)",
@@ -526,7 +544,7 @@ def setup_mcp_config_wizard(vault_path):
             "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
         })
 
-    # 3. Roo Code (VS Code & Cursor)
+    # 6. Roo Code (VS Code & Cursor)
     if sys.platform == "darwin":
         configs.append({
             "name": "Roo Code (VS Code)",
@@ -559,12 +577,29 @@ def setup_mcp_config_wizard(vault_path):
 
     available_targets = []
     for conf in configs:
-        parent_dir = os.path.dirname(conf["path"])
-        if os.path.exists(conf["path"]) or os.path.exists(parent_dir):
+        path = conf["path"]
+        name = conf["name"]
+        
+        detected = False
+        if os.path.exists(path):
+            detected = True
+        else:
+            if "Claude Desktop" in name:
+                detected = os.path.exists(os.path.dirname(path))
+            elif "Cursor (Global)" in name:
+                detected = os.path.exists(os.path.join(home, ".cursor"))
+            elif "Windsurf (Global)" in name:
+                detected = os.path.exists(os.path.join(home, ".codeium"))
+            elif "Claude Code" in name:
+                detected = os.path.exists(os.path.join(home, ".claude"))
+            elif "Cline" in name or "Roo Code" in name:
+                detected = os.path.exists(os.path.dirname(path))
+                
+        if detected:
             available_targets.append(conf)
 
     if not available_targets:
-        print("\nNo supported agent configurations (Claude Desktop, Cline, or Roo Code) were detected on your machine.")
+        print("\nNo supported agent configurations were detected on your machine.")
         print("Please configure your MCP settings manually by pointing your client to:")
         print(f"  Command: python3\n  Arguments: ['{synapse_script_path}', 'mcp']")
         return
