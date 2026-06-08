@@ -423,6 +423,188 @@ def init_vault(vault_path):
     init_db(vault_path)
     print("Vault initialization complete!")
 
+def is_mcp_already_configured(config_path):
+    if not os.path.exists(config_path):
+        return False
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        mcp_servers = data.get("mcpServers", {})
+        return "synapse-vault" in mcp_servers
+    except Exception:
+        return False
+
+def write_mcp_configuration(config_path, script_path):
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        data = {}
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        if "mcpServers" not in data:
+            data["mcpServers"] = {}
+        data["mcpServers"]["synapse-vault"] = {
+            "command": "python3",
+            "args": [script_path, "mcp"]
+        }
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception as e:
+        sys.stderr.write(f"Error writing configuration at {config_path}: {e}\n")
+        return False
+
+def setup_mcp_config_wizard(vault_path):
+    print("\n===============================================")
+    print("🔌 Automated MCP Server Setup")
+    print("===============================================")
+    print("Synapse can automatically configure your local AI agents (Claude Desktop,")
+    print("Cline, Roo Code) to connect to this vault's MCP server.\n")
+    
+    try:
+        choice = input("Would you like to automatically configure MCP for your agents? [Y/n]: ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print("\nSkipped.")
+        return
+        
+    if choice not in ("", "y", "yes"):
+        print("Skipping automatic MCP configuration.")
+        return
+        
+    synapse_script_path = os.path.join(vault_path, "Tools", "synapse.py")
+    home = os.path.expanduser("~")
+    configs = []
+    
+    # 1. Claude Desktop
+    claude_path = ""
+    if sys.platform == "darwin":
+        claude_path = os.path.join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json")
+    elif sys.platform.startswith("linux"):
+        claude_path = os.path.join(home, ".config", "Claude", "claude_desktop_config.json")
+    elif sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            claude_path = os.path.join(appdata, "Claude", "claude_desktop_config.json")
+            
+    if claude_path:
+        configs.append({
+            "name": "Claude Desktop",
+            "path": claude_path
+        })
+        
+    # 2. Cline (VS Code & Cursor)
+    if sys.platform == "darwin":
+        configs.append({
+            "name": "Cline (VS Code)",
+            "path": os.path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+        })
+        configs.append({
+            "name": "Cline (Cursor)",
+            "path": os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+        })
+    elif sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            configs.append({
+                "name": "Cline (VS Code)",
+                "path": os.path.join(appdata, "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+            })
+            configs.append({
+                "name": "Cline (Cursor)",
+                "path": os.path.join(appdata, "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+            })
+    elif sys.platform.startswith("linux"):
+        configs.append({
+            "name": "Cline (VS Code)",
+            "path": os.path.join(home, ".config", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+        })
+        configs.append({
+            "name": "Cline (Cursor)",
+            "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json")
+        })
+
+    # 3. Roo Code (VS Code & Cursor)
+    if sys.platform == "darwin":
+        configs.append({
+            "name": "Roo Code (VS Code)",
+            "path": os.path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+        })
+        configs.append({
+            "name": "Roo Code (Cursor)",
+            "path": os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+        })
+    elif sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            configs.append({
+                "name": "Roo Code (VS Code)",
+                "path": os.path.join(appdata, "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+            })
+            configs.append({
+                "name": "Roo Code (Cursor)",
+                "path": os.path.join(appdata, "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+            })
+    elif sys.platform.startswith("linux"):
+        configs.append({
+            "name": "Roo Code (VS Code)",
+            "path": os.path.join(home, ".config", "Code", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+        })
+        configs.append({
+            "name": "Roo Code (Cursor)",
+            "path": os.path.join(home, ".config", "Cursor", "User", "globalStorage", "roodev.roo-cline", "settings", "cline_mcp_settings.json")
+        })
+
+    available_targets = []
+    for conf in configs:
+        parent_dir = os.path.dirname(conf["path"])
+        if os.path.exists(conf["path"]) or os.path.exists(parent_dir):
+            available_targets.append(conf)
+
+    if not available_targets:
+        print("\nNo supported agent configurations (Claude Desktop, Cline, or Roo Code) were detected on your machine.")
+        print("Please configure your MCP settings manually by pointing your client to:")
+        print(f"  Command: python3\n  Arguments: ['{synapse_script_path}', 'mcp']")
+        return
+
+    print("Detected the following agents:")
+    for idx, target in enumerate(available_targets, 1):
+        status = "[Already configured]" if is_mcp_already_configured(target["path"]) else "[Not configured]"
+        print(f"  [{idx}] {target['name']} {status}")
+    print(f"  [{len(available_targets)+1}] Configure all of them")
+    print(f"  [{len(available_targets)+2}] Skip")
+
+    try:
+        sel = input(f"\nSelect which agent to configure [1-{len(available_targets)+2}]: ").strip()
+        if not sel:
+            return
+            
+        selected_targets = []
+        if sel.isdigit():
+            val = int(sel)
+            if 1 <= val <= len(available_targets):
+                selected_targets = [available_targets[val-1]]
+            elif val == len(available_targets) + 1:
+                selected_targets = available_targets
+            else:
+                print("Skipped configuration.")
+                return
+        else:
+            print("Invalid selection. Skipped.")
+            return
+
+        for target in selected_targets:
+            success = write_mcp_configuration(target["path"], synapse_script_path)
+            if success:
+                print(f"✔ Successfully configured MCP for {target['name']}.")
+            else:
+                print(f"❌ Failed to configure MCP for {target['name']}.")
+                
+    except (KeyboardInterrupt, EOFError):
+        print("\nAborted.")
+
 def search_vault(vault_path, query, tags=None):
     model = None
     if FASTEMBED_AVAILABLE:
@@ -1179,6 +1361,8 @@ def main():
                 
         vault_path = os.path.abspath(os.path.expanduser(vault_path))
         init_vault(vault_path)
+        if sys.stdin.isatty():
+            setup_mcp_config_wizard(vault_path)
     else:
         vault_path = get_vault_path(args)
         if not os.path.exists(vault_path):
