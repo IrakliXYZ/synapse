@@ -23,8 +23,8 @@ read -p "Do you want to enable local semantic/vector search? (Requires installin
 INSTALL_FAST="${INSTALL_FAST:-Y}"
 
 if [[ "$INSTALL_FAST" =~ ^[Yy]$ ]]; then
-    echo "Installing dependencies from requirements.txt..."
-    python3 -m pip install -r requirements.txt
+    echo "Installing Python dependencies (fastembed, numpy)..."
+    python3 -m pip install fastembed numpy
     echo "✔ Dependencies installed successfully."
     echo ""
 else
@@ -32,8 +32,18 @@ else
     echo ""
 fi
 
-# 3. Hand off to the Python Interactive Vault Init Wizard
-python3 synapse.py init
+# 3. Run the Python Interactive Vault Init Wizard
+if [ -f "synapse.py" ]; then
+    # Running from a local cloned repository
+    python3 synapse.py init
+else
+    # Running via one-line curl install (download temporary launcher)
+    echo "Downloading Synapse setup wizard..."
+    TEMP_DIR=$(mktemp -d)
+    curl -fsSL "https://raw.githubusercontent.com/IrakliXYZ/synapse/main/synapse.py" -o "$TEMP_DIR/synapse.py"
+    python3 "$TEMP_DIR/synapse.py" init
+    rm -rf "$TEMP_DIR"
+fi
 
 echo ""
 echo "==============================================="

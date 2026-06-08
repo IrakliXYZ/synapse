@@ -43,20 +43,23 @@ YourVault/
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### ⚡ One-Line Installation (No cloning required)
+To bootstrap a new memory vault or configure an existing one instantly, run this command in your terminal:
 ```bash
-git clone https://github.com/yourusername/synapse.git
-cd synapse
+curl -fsSL https://raw.githubusercontent.com/IrakliXYZ/synapse/main/setup.sh | bash
 ```
 
-### 2. Run the Interactive Installer
+### 📦 Option 2: Clone & Local Install
+If you prefer to clone the repository and run the setup files locally:
 ```bash
-chmod +x setup.sh
-./setup.sh
+git clone https://github.com/IrakliXYZ/synapse.git
+cd synapse
+chmod +x setup.sh && ./setup.sh
 ```
-The installer will prompt you for:
-- Whether you want to enable local semantic search (installs `fastembed` automatically).
-- The path to your Memory Vault (defaults to `~/SynapseVault`). If you have existing vaults, it will automatically detect and suggest them.
+
+The interactive setup wizard will guide you to:
+- Enable local semantic/vector search (which automatically installs the required Python dependencies).
+- Specify your target vault path (it scans your local system, checks iCloud default settings, and detects existing directories automatically).
 
 ---
 
